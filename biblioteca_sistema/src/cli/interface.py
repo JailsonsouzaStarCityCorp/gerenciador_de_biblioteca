@@ -316,9 +316,101 @@ class LibraryInterface:
         self.wait_for_enter()
 
     def loans_menu(self) -> None:
+        while True:
+            self.clear_screen()
+            self.print_header("GERENCIAR EMPRÉSTIMOS")
+            print(f"{Fore.YELLOW}1. ➕ Criar Empréstimo")
+            print(f"2. ↩️  Devolver Empréstimo")
+            print(f"3. 🔁 Renovar Empréstimo")
+            print(f"4. 📋 Listar Empréstimos Ativos")
+            print(f"5. 🕓 Histórico de Empréstimos do Usuário")
+            print(f"6. ⬅️  Voltar{Style.RESET_ALL}")
+            choice = input(f"\n{Fore.CYAN}Escolha uma opção: {Style.RESET_ALL}")
+            if choice == '1':
+                self.create_loan()
+            elif choice == '2':
+                self.return_loan()
+            elif choice == '3':
+                self.renew_loan()
+            elif choice == '4':
+                self.list_active_loans()
+            elif choice == '5':
+                self.user_loan_history()
+            elif choice == '6':
+                break
+            else:
+                self.print_error("Opção inválida!")
+                self.wait_for_enter()
+
+    def create_loan(self) -> None:
         self.clear_screen()
-        self.print_header("GERENCIAR EMPRÉSTIMOS")
-        self.print_warning("Funcionalidades de empréstimos podem ser expandidas aqui.")
+        self.print_header("CRIAR EMPRÉSTIMO")
+        try:
+            user_id = self.get_valid_integer("ID do usuário: ")
+            book_id = self.get_valid_integer("ID do livro: ")
+            loan = self.loan_service.create_loan(user_id, book_id)
+            self.print_success(f"Empréstimo criado! ID: {loan.id}")
+        except Exception as e:
+            self.print_error(str(e))
+        self.wait_for_enter()
+
+    def return_loan(self) -> None:
+        self.clear_screen()
+        self.print_header("DEVOLVER EMPRÉSTIMO")
+        loan_id = self.get_valid_integer("ID do empréstimo: ")
+        if self.loan_service.return_loan(loan_id):
+            self.print_success("Empréstimo devolvido!")
+        else:
+            self.print_error("Não foi possível devolver o empréstimo")
+        self.wait_for_enter()
+
+    def renew_loan(self) -> None:
+        self.clear_screen()
+        self.print_header("RENOVAR EMPRÉSTIMO")
+        loan_id = self.get_valid_integer("ID do empréstimo: ")
+        days = self.get_valid_integer("Dias de renovação (padrão 7): ")
+        if self.loan_service.renew_loan(loan_id, days):
+            self.print_success("Empréstimo renovado!")
+        else:
+            self.print_error("Não foi possível renovar o empréstimo")
+        self.wait_for_enter()
+
+    def list_active_loans(self) -> None:
+        self.clear_screen()
+        self.print_header("EMPRÉSTIMOS ATIVOS")
+        loans = self.loan_service.get_active_loans()
+        if not loans:
+            self.print_warning("Nenhum empréstimo ativo")
+        else:
+            rows = []
+            for loan in loans:
+                rows.append([
+                    loan.id,
+                    loan.user_id,
+                    loan.book_id,
+                    loan.loan_date.strftime("%d/%m/%Y"),
+                ])
+            print(tabulate(rows, headers=["ID", "Usuário", "Livro", "Data"], tablefmt="grid"))
+        self.wait_for_enter()
+
+    def user_loan_history(self) -> None:
+        self.clear_screen()
+        self.print_header("HISTÓRICO DE EMPRÉSTIMOS DO USUÁRIO")
+        user_id = self.get_valid_integer("ID do usuário: ")
+        loans = self.loan_service.get_user_history(user_id)
+        if not loans:
+            self.print_warning("Nenhum empréstimo encontrado")
+        else:
+            rows = []
+            for loan in loans:
+                rows.append([
+                    loan.id,
+                    loan.book_id,
+                    loan.loan_date.strftime("%d/%m/%Y"),
+                    loan.return_date.strftime("%d/%m/%Y") if loan.return_date else "-",
+                    "Devolvido" if loan.is_returned else "Ativo",
+                ])
+            print(tabulate(rows, headers=["ID", "Livro", "Empréstimo", "Devolução", "Status"], tablefmt="grid"))
         self.wait_for_enter()
 
     def reports_menu(self) -> None:
